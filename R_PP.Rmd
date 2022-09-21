@@ -1,0 +1,399 @@
+---
+title: "Lung_Cancer_Patient"
+output: html_document
+---
+```{r}
+remove(list= ls()) # clear the enviornment
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+Lung cancer is one of the worlds largest health problems. Every sixth death in the world is due to lung cancer, making it the second most common form of cancer in the world so I have decided to use the sample dataset of the lung cancer patient obtained from the data world to analyze what are the factor causing the lung cancer and it's symptoms in different age group and gender.
+
+## Objectives
+ a) Which age group of people smoke more often?
+ b) Which gender of people smoke more?
+ c) Which age group of people area listed more in passive smoking?
+ d) Which age group of people are at high genetic risk of lung cancer?
+
+## Dataset Understanding
+The data files of the lung cancer and different factors are in CSV file format. Here I have created the dataframe called lung_data and stored using read.csv() method. 
+```{r}
+#importing the csv file
+lung_data <- read.csv(file = "lung-cancer.csv")
+head(lung_data)
+```
+
+
+Similarly,I have found the dimension of the dataset and It has 1000 rows and 24 columns.
+
+```{r}
+#finding the dimension of dataset
+dim(lung_data)
+```
+To find the detail information regarding rows and columns I have used the str() method. It provides the columns names and types of data stored in each columns. Where Patient_ID, Gender and Level variables are  of character type where as other columns are of integer type.
+```{r}
+#Display the structure of the dataset
+str(lung_data)
+```
+Now, I have used the summary() function to get descriptive statistics such as the minimum, the first quantile, the median, the mean, the 3rd quantile, and the maximum value of each column.
+```{r}
+#Finding the summary of the dataset
+summary(lung_data)
+```
+
+
+To find the first 6 rows of the dataset I have used the head() function.
+```{r}
+# Finding first head of the dataset
+head(lung_data)
+```
+## Data Cleaning
+Inorder to increase overall productivity and to get the highest quality information in decision making I have carried out the data cleaning process. First of all using unique Patient_ID column I have decided to find duplicate value present in dataset.
+```{r}
+#Checking the duplicate record stored in Dataset
+dup_records <- duplicated(lung_data$Patient_ID)
+sum(dup_records)
+```
+From above output we can see that there is no any duplicate record present in dataset.
+```{r}
+#Duplicate the dataframe
+duplicate_data <- lung_data
+```
+After then assign lung_data dataframe to duplicate_data.
+```{r}
+#Replace blank and space by NA
+duplicate_data[duplicate_data == "" | duplicate_data == " "] <- NA   
+duplicate_data
+```
+Now, further check if there is "NA" present in dataset or not? 
+```{r}
+#Checking the NA value
+any(is.na(duplicate_data))
+```
+From the above output we can see that NA value is present in dataset, so I have used the sapply function to find out total number of missing "NA" value in each columns.
+```{r}
+#Finding the total number of NA
+sapply(duplicate_data, function(x) sum(is.na(x)))
+```
+The output above shows that columns like Smoking and Weight_Loss consist of "NA".Again I have find the total number of "NA" present in overall dataset.
+
+```{r}
+#Total NA present in dataset.
+sum(is.na(duplicate_data))
+
+```
+
+Similarly replace other columns NA by 0's
+```{r}
+#Replacing NA by 0;s
+duplicate_data[is.na(duplicate_data)]<- 0
+```
+
+After carrying out all the cleaning procedure use view() function to see the cleaning data.
+```{r}
+View(duplicate_data)
+```
+
+## Data Analysis
+
+
+```{r}
+#install.packages("ggplot2")
+library(ggplot2)
+ggplot(duplicate_data, aes(Age,Smoking, fill= Age)) + geom_bar(stat = "identity")+
+  labs(title = "Different Age Group of People with Smoking Number ",
+        x = "Age", y = "Smoking Number")
+```
+
+From the above output we can see that age group between 30-40 smoke more often. Where as age group above 70 and below 15 smoke very less.
+```{r}
+library(ggplot2)
+ggplot(duplicate_data, aes(Gender, Smoking, fill= Gender)) + geom_bar(stat = "identity")+
+  labs(title = "Different Gender of People with Smoking Number ",
+        x = "Gender", y = "Smoking Number")
+```
+
+From the above output we can conclude that more number of female smoke cigrate compare to male.
+
+```{r}
+ggplot(duplicate_data, aes(as.factor(Chronic_Lung_Disease), Genetic_Risk, fill= as.factor(Chronic_Lung_Disease))) + geom_bar(stat = "identity")+
+  labs(title = "Level of Genetic Risk on the patient with Chronic Lung Disease ",
+        x = "Chronic Lung Disease", y = "Genetic Risk")
+```
+
+From the above output we can visibly notice that people having genetic risk are more prone to chronic Lung diseases.
+
+
+```{r}
+theme_set(theme_bw())  # pre-set the bw theme.
+g <- ggplot(duplicate_data, aes(Age, Passive_Smoker))
+g + geom_count(col="tomato3", show.legend=F) +
+  labs(y="Passive Smoker Number", 
+       x="Age", 
+       title="Plot to Show Number of Passive Smoker in Different Age Group")
+```
+
+From the above diagram we can see that age group between 30-40 are most passive smoker.
+
+```{r}
+cor(duplicate_data[,c("Chest_Pain","Coughing_of_Blood")])
+```
+```{r}
+p1<- ggplot(duplicate_data, aes(Chest_Pain, Coughing_of_Blood))+geom_point(aes(color=Level),alpha=0.5)
+p1 +labs(y="Coughing of Blood Number", 
+       x="Chest Pain Level", 
+       title="Plot to Show Relationship Between Coughing of Blood and Chest Pain")
+```
+
+From the above graph we can see that patient having high coughing of blood too have severe chest pain compare to other.
+
+## Liner Regression
+The Coefficients section shows:
+The estimates (Estimate) for the model parameters - the value of the y-intercept (in this case 1.49364) and the estimated effect of Chest Pain on Coughing of Blood (0.75831).
+The standard error of the estimated values is 0.02366.
+The test statistic or t value in this case is 32.05.
+the most important thing to note is the p-value (here it is 2e-16, or almost zero), which will indicate whether the model fits the data well.
+From these results, we can say that there is a significant positive relationship between Chest pain and Coughing of Blood (p-value < 0.001), with a 0.75831-unit (+/- 0.01) increase in Coughing of Blood  for every unit increase in Chest Pain.
+```{r}
+#Create a model using linear regression and find summary
+model_1<- lm(Coughing_of_Blood ~ Chest_Pain, duplicate_data)
+print(summary(model_1))
+```
+Thus, holding other things constant chest pain increased by 1 led to coughing of blood increased by 0.75831.
+How many times coughing of blood when chest pain is 2?
+
+
+```{r}
+#Predict the model
+temp.test<- data.frame(Chest_Pain=c(2))
+predict(model_1,temp.test)
+```
+```{r}
+income.graph<-ggplot(duplicate_data, aes(x=Chest_Pain, y=Coughing_of_Blood))+
+                     geom_point()
+income.graph
+```
+```{r}
+
+income.graph <- income.graph + geom_smooth(method="lm", col="black")
+
+income.graph
+```
+
+
+```{r}
+model_1$residuals
+plot(model_1$residuals)
+
+#add a horizontal line at 0 
+abline(0,0)
+
+```
+```{r}
+#create Q-Q plot for residuals
+qqnorm(model_1$residuals)
+
+#add a straight diagonal line to the plot
+qqline(model_1$residuals)
+```
+
+```{r}
+##To check whether the dependent variable follows a normal distribution, use the hist() function.
+hist(model_1$residuals)
+```
+```{r}
+### Residuals should be random and near to normal distribution 
+plot(density(model_1$residuals))
+```
+```{r}
+library(MASS)
+library(caret)
+
+stepAIC(model_1,direction = "both")
+
+```
+
+```{r}
+#predicting the  Coughing_of Blood  using  the linear regressi
+predict(model_1, duplicate_data[25:32, c("Chest_Pain","Coughing_of_Blood")]) # Model, Test Input
+duplicate_data[25:32, 'Coughing_of_Blood']
+```
+
+##Linear Regression of the training and Testing Data
+```{r}
+AIC(model_1)  # AIC => 419.1569
+BIC(model_1)  # BIC => 424.8929
+```
+
+```{r}
+# Create Training and Test Data
+# setting seed to reproduce results of random sampling
+set.seed(100) 
+trainingChestPain <- sample(1:nrow(duplicate_data), 0.8*nrow(duplicate_data))  # row indices for training data
+trainingData <- duplicate_data[trainingChestPain, ]  # model training data
+testData  <- duplicate_data[-trainingChestPain, ]   # test data
+```
+
+```{r}
+#Build the model on training data -
+model_2 <- lm(Coughing_of_Blood ~ Chest_Pain, data=trainingData)  # build the model
+coughPred <- predict(model_2, testData)  # predict data
+coughPred
+```
+
+```{r}
+#Finding summary of model_2
+summary (model_2) 
+```
+```{r}
+#Finding AIC of model_2
+stepAIC(model_2,direction = "both")
+```
+
+```{r}
+# make actuals_predicteds dataframe.
+actuals_preds <- data.frame(cbind(actuals=testData$Coughing_of_Blood, predicteds=coughPred))  x
+#Finding correaltion
+correlation_accuracy <- cor(actuals_preds)
+correlation_accuracy
+```
+```{r}
+head(actuals_preds)
+```
+```{r}
+#create Q-Q plot for residuals
+qqnorm(model_2$residuals)
+
+#add a straight diagonal line to the plot
+qqline(model_2$residuals)
+```
+
+
+```{r}
+min_max_accuracy <- mean(apply(actuals_preds, 1, min) / apply(actuals_preds, 1, max)) 
+min_max_accuracy
+# => 75.07%, min_max accuracy
+mape <- mean(abs((actuals_preds$predicteds - actuals_preds$actuals))/actuals_preds$actuals)  
+mape
+# => 45.33%, mean absolute percentage deviation
+```
+# Logistic Regression
+```{r}
+# Create Training and Test Data
+# setting seed to reproduce results of random sampling
+set.seed(100) 
+trainingChestPain <- sample(1:nrow(duplicate_data), 0.8*nrow(duplicate_data))  # row indices for training data
+trainingData <- duplicate_data[trainingChestPain, ]  # model training data
+testData  <- duplicate_data[-trainingChestPain, ]   # test data
+```
+```{r}
+#install.packages("MASS")
+#install.packages("caret")
+#install.packages(nnet)
+library(MASS)
+library(caret)
+library(nnet)
+```
+
+```{r}
+#Build the model on training data -
+multinomModel <- multinom(Level ~ Coughing_of_Blood + Chest_Pain, data=trainingData) # multinom Model
+summary(multinomModel)
+```
+```{r}
+predicted_class <- predict (multinomModel, testData)
+predicted_class
+```
+```{r}
+#predict the value
+table(predicted_class, testData$Level)
+```
+
+```{r}
+#Creating Confusion matrix
+confusionMatrix(as.factor(testData$Level), as.factor(predicted_class))
+```
+##Clustering
+```{r}
+#Slicing the orginal dataset
+cluster_data <- duplicate_data[3:23]
+cluster_data
+```
+
+```{r}
+# Using the elbow method to find the optimal number of clusters
+set.seed(101)
+wcss<- vector()
+for(i in 1:10)
+  wcss[i]<- sum(kmeans(cluster_data, i)$withinss)
+plot(1:10, wcss, type="b", main=("Cluster of Patient"), xlab="Number of Cluster", ylab= "WCSS")
+```
+
+
+```{r}
+#Applying Kmeans to the dataset
+set.seed(100)
+#cluster_model <- kmeans(cluster_data, 2,iter.max= 300 ,nstart = 10)
+cluster_model<- kmeans(cluster_data, centers = 2, nstart = 25)
+
+cluster_model
+```
+
+```{r}
+#finding the summary of cluster_model
+summary(cluster_model)
+#finding approprite number of cluster
+cluster_model$cluster
+#finding the center of the cluster
+cluster_model$centers
+#finding the totss of the cluster
+cluster_model$totss
+
+```
+
+```{r}
+#Visualizing the cluster
+library(cluster)
+#cluster_model$centers[, c("Dust_Allergy", "Occupational_H")]
+  
+duplicate_data$cluster_number <- cluster_model$cluster
+ggplot(duplicate_data, aes(x=Dust_Allergy, y=Occupational_Hazards,col=as.factor(cluster_number)))+geom_point()
+```
+```{r}
+#install.packages("factoextra")
+#install.packages(ggpubr)
+library(ggpubr)
+library(factoextra)
+```
+
+```{r}
+fviz_cluster(cluster_model, data = duplicate_data[3:23],
+             palette = c("#2E9FDF", "#00AFBB", "#E7B800"), 
+             geom = "point",
+             ellipse.type = "convex", 
+             ggtheme = theme_bw()
+             )
+```
+```{r}
+#Using dendogram to find optimal number of cluster
+dendrogram =hclust(dist(cluster_data),method= 'ward.D')
+plot(dendrogram, main=paste('Dendrogram', xlab='Patients',ylab='Eculidean Distance'))
+```
+
+```{r}
+#Fitting hierarchical clustering to the patient dataset
+hc=hclust(dist(cluster_data),method= 'ward.D')
+y_hc= cutree(hc,2)
+```
+
+```{r}
+#Visualizing the clusters
+library(cluster)
+clusplot(cluster_data, y_hc, lines= 0, shade= TRUE, labels= 2, plotchar= TRUE, main=paste('Cluster of lung cancer patient'), xlab= "Dimension_1", ylab="Dimension_2")
+```
+
